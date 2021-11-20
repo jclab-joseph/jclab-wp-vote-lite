@@ -61,9 +61,6 @@ export class ConfigController {
     oauth2AuthorizeUri.searchParams.append('client_id', oauth2ClientId);
     oauth2AuthorizeUri.searchParams.append('scope', 'jclab-wp-lite.vote/*');
 
-    // jclab-wp-lite.vote/voter
-    //
-    console.log('req.cookies: ', req.cookies);
     const accessToken: string | undefined = req.cookies[AuthService.ACCESS_TOKEN_COOKIE_NAME];
     const voterToken: string | undefined = req.cookies[VoteAuthService.VOTE_TOKEN_COOKIE_NAME];
     return Promise.all([
@@ -79,7 +76,6 @@ export class ConfigController {
       .then(async ([decodedAccessToken, decodedVoterToken]) => {
         const authorizedScopes: string[] = [];
         let electionTitle: string = '';
-        console.log('decodedAccessToken: ', decodedAccessToken);
         if (decodedAccessToken) {
           authorizedScopes.push(...decodedAccessToken.payload.scope);
         }

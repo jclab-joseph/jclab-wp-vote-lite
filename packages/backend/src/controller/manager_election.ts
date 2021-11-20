@@ -131,7 +131,6 @@ export class ManagerElectionController {
       .then((token) => {
         return this.voterService.newVoters(elecId, count)
           .then((voters) => {
-            console.log('body: ', body);
             return this._lambda.invoke({
               FunctionName: 'arn:aws:lambda:ap-northeast-2:023247924618:function:jclab-wp-templated-generator-hwp',
               InvocationType: 'RequestResponse',
@@ -141,7 +140,7 @@ export class ManagerElectionController {
                 itemsJson: JSON.stringify(voters.map(v => ({id: v.id, pw: v.pw})))
               })
             }).promise().then((funcRes) => {
-              console.log('PAYLOAD[' + funcRes.Payload + ']')
+              this.log.debug('generate-voters: PAYLOAD[' + funcRes.Payload + ']');
               const payload = (() => {
                 try {
                   return JSON.parse(funcRes.Payload as any) as string;

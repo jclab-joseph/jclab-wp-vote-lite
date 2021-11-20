@@ -66,7 +66,6 @@ export class ElectionService {
           createdAt: Math.floor(v.createdAt.getTime() / 1000)
         }))
           .sort((x, y) => {
-            console.log('SORT: ', x, y);
             if (x.createdAt < y.createdAt) return 1;
             if (x.createdAt > y.createdAt) return -1;
             return 0;

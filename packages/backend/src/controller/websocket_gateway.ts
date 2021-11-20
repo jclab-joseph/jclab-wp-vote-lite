@@ -26,8 +26,6 @@ export class WebsocketGateway {
     this.apig_ = new AWS.ApiGatewayManagementApi({
       endpoint: ConfigManager.APIG_ENDPOINT
     });
-    console.log(process.env);
-    console.log('ConfigManager.APIG_ENDPOINT: ', ConfigManager.APIG_ENDPOINT);
   }
 
   public sendEvent(connectionId: string, event: string, data: any) {
