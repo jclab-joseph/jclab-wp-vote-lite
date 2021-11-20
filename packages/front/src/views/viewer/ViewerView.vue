@@ -142,12 +142,16 @@ export default class ViewerView extends Vue {
       }, 1000);
       this.refreshTimer = setInterval(() => {
         if (this.info && this.info.votes) {
-          this.wsc.wsEmit(
-            'request.votes.update.status',
-            this.info.votes
-              .filter(v => v.state !== VoteState.completed)
-              .map(v => v.voteId)
-          );
+          const voteIds = this.info.votes
+            .filter(v => v.state !== VoteState.completed)
+            .map(v => v.voteId);
+          if (voteIds.length > 0) {
+            this.wsc.wsEmit(
+              'request.votes.update.status',
+              {
+                voteIds: voteIds
+              });
+          }
         }
       }, 1000);
     });
@@ -177,17 +181,7 @@ export default class ViewerView extends Vue {
       }
     });
 
-    this.$appsvc.httpClient.post(
-      '/api/view/login',
-      {
-        id: this.viewId
-      }
-    )
-      .then((response) => {
-        this.$nextTick(() => {
-          this.$appsvc.startViewerMode();
-        });
-      });
+    this.$appsvc.startViewerMode(this.viewId);
   }
 
   public beforeDestroy (): void {

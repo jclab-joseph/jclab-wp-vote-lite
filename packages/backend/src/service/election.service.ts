@@ -96,7 +96,7 @@ export class ElectionService {
                     createdAt: Math.floor(v.createdAt.getTime() / 1000),
                     voterCount: v.voterCount,
                     votedCount: voteStates[i].votedCount,
-                    candidates: v.candidates.map(c => ({
+                    candidates: v.sortedCandidates.map(c => ({
                       cadtId: c.cadtId,
                       name: c.name,
                       number: c.number

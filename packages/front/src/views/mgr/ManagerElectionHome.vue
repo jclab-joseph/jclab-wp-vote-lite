@@ -395,12 +395,8 @@ export default class ManagerElectionHome extends Vue {
 
   public newVoteProceeding: boolean = false;
   public newVoteError: string = '';
-  public newVoteTitle: string = '가나다 투표';
-  public newVoteCandidates: NewVoteCandidate[] = [
-    { name: '번쩍 에디' },
-    { name: '새침한 프로도' },
-    { name: '귀여운 안나' },
-  ];
+  public newVoteTitle: string = '';
+  public newVoteCandidates: NewVoteCandidate[] = [];
 
   public newVoteCandidateName: string = '';
 
@@ -428,9 +424,36 @@ export default class ManagerElectionHome extends Vue {
     this.wsc.on('election.now.voter.count', (data) => {
       this.nowConnectedVoterCount = data.count;
     });
+    this.wsc.on('votes.update.status', (votes) => {
+      if (this.info && this.info.votes) {
+        const storedVotes = this.info.votes;
+        votes.forEach((vote) => {
+          const item = storedVotes.find(v => v.voteId === vote.voteId);
+          if (item) {
+            this.$set(item, 'state', vote.state);
+            this.$set(item, 'voterCount', vote.voterCount);
+            this.$set(item, 'votedCount', vote.votedCount);
+            this.$set(item, 'result', vote.result);
+          }
+        });
+      }
+    });
     this.refreshTimer = setInterval(() => {
       if (this.wsc.isConnected) {
         this.wsc.wsEmit('request.election.now.voter.count', { elecId: this.elecId });
+        if (this.info && this.info.votes) {
+          const voteIds = this.info.votes
+            .filter(v => v.state !== VoteState.completed)
+            .map(v => v.voteId);
+          if (voteIds.length > 0) {
+            this.wsc.wsEmit(
+              'request.votes.update.status',
+              {
+                elecId: this.elecId,
+                voteIds: voteIds
+              });
+          }
+        }
       }
     }, 1000);
   }

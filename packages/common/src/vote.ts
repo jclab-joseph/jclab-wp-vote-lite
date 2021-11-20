@@ -49,6 +49,12 @@ export interface VoteRequest {
   message: string;
 }
 
+// request.votes.update.status
+export interface VotesStateUpdateRequest {
+  elecId?: string;
+  voteIds: string[];
+}
+
 export interface VoteStateUpdateItem {
   voteId: string;
   state: VoteState;

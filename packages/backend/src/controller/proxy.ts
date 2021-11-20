@@ -14,6 +14,7 @@ export class ProxyController implements OnModuleInit {
   onModuleInit (): any {
     return Promise.resolve()
       .then(() => {
+        console.log('ConfigManager.FRONT_PROXY_URL: ', ConfigManager.FRONT_PROXY_URL);
         if (ConfigManager.FRONT_PROXY_URL) {
           return import('http-proxy-middleware')
             .then((mod) => {

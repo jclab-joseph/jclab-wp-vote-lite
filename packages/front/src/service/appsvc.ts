@@ -1,10 +1,22 @@
 import * as events from 'events';
 import { VueConstructor } from 'vue';
 import axios, { Axios, AxiosError, AxiosInstance } from 'axios';
-import { ElectionWithVotes, VoteStateUpdateItem } from '@jclab-wp/vote-lite-common';
+import {
+  ElectionWithVotes,
+  VotesStateUpdateRequest,
+  VoteStateUpdateItem,
+  WsHandshakeRequest,
+  WsHandshakeResponse,
+} from '@jclab-wp/vote-lite-common';
 
 const vueModulePropName = '$appsvc';
 const symbolGlobalInited = Symbol('AppServiceInited');
+
+export enum HandshakeStatus {
+  IDLE = 0,
+  SUCCESS = 1,
+  FAILED = 2
+}
 
 export interface WsCommunicator extends events.EventEmitter {
   readonly isConnected: boolean;
@@ -17,7 +29,7 @@ export interface WsCommunicator extends events.EventEmitter {
 
   wsEmit(type: string, data?: any): boolean;
   wsEmit(type: 'request.election.update'): boolean;
-  wsEmit(type: 'request.votes.update.status'): boolean;
+  wsEmit(type: 'request.votes.update.status', data: VotesStateUpdateRequest): boolean;
   wsEmit(type: 'request.election.now.voter.count'): boolean;
 }
 
@@ -25,10 +37,12 @@ export interface AppService {
   [symbolGlobalInited]: boolean;
   httpClient: Axios;
 
+  wsStatus: HandshakeStatus;
+
   goLogin(): void;
   logout(): void;
   feedChangeLoginStatus(): void;
-  startViewerMode(): void;
+  startViewerMode(viewId: string): void;
 
   wscAttach(instance: any): WsCommunicator;
   wscDetach(instance: any): void;
@@ -85,12 +99,12 @@ export interface AppServicePriv {
 }
 
 export class WsCommunicatorImpl extends events.EventEmitter implements WsCommunicator {
-  constructor (private appService: AppServicePriv) {
+  constructor (private appService: AppServicePriv & AppService) {
     super();
   }
 
   public get isConnected (): boolean {
-    return !!this.appService.ws;
+    return this.appService.wsStatus === HandshakeStatus.SUCCESS;
   }
 
   public wsEmit (type: string, data?: any): boolean {
@@ -106,8 +120,9 @@ export class AppServiceImpl implements AppService, AppServicePriv {
   private _ws: WebSocket | null = null;
   private _wsTimer: number = 0;
   private _wsErrorCount: number = 0;
+  private _wsHandshakeStatus: HandshakeStatus = HandshakeStatus.IDLE;
 
-  private _viewerMode: boolean = false;
+  private _viewId: string | null = null;
 
   private _wsc: Record<any, WsCommunicatorImpl> = {};
 
@@ -170,7 +185,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
     ws.onopen = (ev) => {
       console.log('websocket open: ', ev);
       this._wsErrorCount = 0;
-      this._emitEvent('connect');
+      this._wsStartHandshake();
     };
     ws.onclose = (ev) => {
       console.log('websocket close: ', ev);
@@ -191,6 +206,10 @@ export class AppServiceImpl implements AppService, AppServicePriv {
     };
     ws.onmessage = (ev) => {
       const { event, data } = JSON.parse(ev.data);
+      if (event === 'handshake.response') {
+        this._wsOnHandshakeResponse(data as WsHandshakeResponse);
+        return;
+      }
       this._emitEvent(event, data);
     };
   }
@@ -203,6 +222,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
   }
 
   public wsClose () {
+    this._wsHandshakeStatus = HandshakeStatus.IDLE;
     if (this._ws) {
       (this._ws as any).useReconnect = false;
       this._ws.close();
@@ -214,7 +234,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
     this.app = app;
   }
 
-  wscAttach (instance: any): WsCommunicator {
+  public wscAttach (instance: any): WsCommunicator {
     const wsc = new WsCommunicatorImpl(this);
     this._wsc[instance] = wsc;
     this.app.$nextTick(() => {
@@ -225,7 +245,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
     return wsc;
   }
 
-  wscDetach (instance: any): void {
+  public wscDetach (instance: any): void {
     delete this._wsc[instance];
   }
 
@@ -250,10 +270,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
 
   public logout (): void {
     this.httpClient.get(
-      '/api/auth/logout',
-      {
-        withCredentials: true
-      }
+      '/api/auth/logout'
     )
       .catch((err) => {
         console.error(err);
@@ -264,7 +281,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
   }
 
   public feedChangeLoginStatus (forceWsReconnect?: boolean): void {
-    console.log(this.app.$store.state);
+    console.log('feedChangeLoginStatus state:', JSON.stringify(this.app.$store.state, null, 1));
     this._wsErrorCount = 0;
     if (this.isLogon) {
       if (!this._ws || forceWsReconnect) {
@@ -275,8 +292,8 @@ export class AppServiceImpl implements AppService, AppServicePriv {
     }
   }
 
-  startViewerMode (): void {
-    this._viewerMode = true;
+  public startViewerMode (viewId: string): void {
+    this._viewId = viewId;
     this.feedChangeLoginStatus();
   }
 
@@ -285,6 +302,43 @@ export class AppServiceImpl implements AppService, AppServicePriv {
   }
 
   public get isLogon (): boolean {
-    return (this.app.$store.state.authorizedScopes.length > 0) || this._viewerMode;
+    return ((!!this.app.$store.state.currentContext) && (this.app.$store.state.authorizedScopes.length > 0)) || (this._viewId !== null);
+  }
+
+  private _wsStartHandshake (): void {
+    const currentContext = this.app.$store.state.currentContext;
+    let payload: WsHandshakeRequest | null = null;
+    switch (this.app.$store.state.currentContext) {
+      case 'viewer':
+        payload = {
+          mode: 'viewer',
+          viewId: this._viewId as string
+        };
+        break;
+      default:
+        payload = {
+          mode: currentContext as any
+        };
+        break;
+    }
+    if (!payload) {
+      alert('ERROR: NO CONTEXT');
+      return;
+    }
+    this.wsEmit('handshake.request', payload);
+  }
+
+  public get wsStatus (): HandshakeStatus {
+    return this._wsHandshakeStatus;
+  }
+
+  private _wsOnHandshakeResponse (response: WsHandshakeResponse): void {
+    this._wsHandshakeStatus = response.result ? HandshakeStatus.SUCCESS : HandshakeStatus.FAILED;
+    if (response.result) {
+      this._emitEvent('connect');
+    } else {
+      alert('WEBSOCKET ERROR: ' + response.message);
+      this.logout();
+    }
   }
 }

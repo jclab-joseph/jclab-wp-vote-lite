@@ -10,8 +10,8 @@
         outlined
         tile
       >
-        <v-card-text style="display: flex; flex-direction: row">
-          <div style="width: 50%;">
+        <v-card-text style="display: flex; flex-direction: column">
+          <div>
             <p class="text-h4 text--primary">
               {{ vote.title }}
             </p>
@@ -23,24 +23,12 @@
             </div>
             <div v-else-if="vote.state === VoteState.voting && vote.voted" class="vote_card__status">
               투표 하였습니다
-              <VoteCandidateList
-                :list="vote.candidates"
-                type="tile"
-              ></VoteCandidateList>
             </div>
             <div v-else-if="vote.state === VoteState.finished" class="vote_card__status">
               투표가 종료되었습니다.
-              <VoteCandidateList
-                :list="vote.candidates"
-                type="tile"
-              ></VoteCandidateList>
             </div>
             <div v-else-if="vote.state === VoteState.counting" class="vote_card__status">
               개표 중 입니다.
-              <VoteCandidateList
-                :list="vote.candidates"
-                type="tile"
-              ></VoteCandidateList>
             </div>
             <div
               v-else-if="vote.state === VoteState.completed" class="vote_card__status"
@@ -61,13 +49,7 @@
             <!--            </v-btn>-->
             <!--          </v-card-actions>-->
           </div>
-          <div style="width: 50%; display: flex; align-items: stretch;">
-            <div v-if="vote.state < VoteState.voting" class="vote_card__right">
-              <VoteCandidateList
-                :list="vote.candidates"
-                type="row"
-              ></VoteCandidateList>
-            </div>
+          <div style="display: flex; align-items: stretch;">
             <v-btn
               v-if="vote.state === VoteState.voting && !vote.voted"
               v-on:click="toggleVote(vote.voteId)"
@@ -76,18 +58,24 @@
               <v-icon>fas fa-vote-yea</v-icon>
               투표하기
             </v-btn>
-<!--            <v-btn-->
-<!--              v-else-if="vote.state !== VoteState.completed"-->
-<!--              v-on:click="toggleVote(vote.voteId)"-->
-<!--              class="vote_card__button"-->
-<!--            >-->
-<!--              <v-icon>fas fa-vote-yea</v-icon>-->
-<!--              정보 보기-->
-<!--            </v-btn>-->
-            <VoteResultChart
-              v-else-if="vote.state === VoteState.completed"
-              :result="vote.result"
-            ></VoteResultChart>
+          </div>
+          <div
+            v-if="selectedVoteId !== vote.voteId"
+          >
+            <div v-if="vote.state !== VoteState.completed">
+              <VoteCandidateList
+                :list="vote.candidates"
+                type="row"
+              ></VoteCandidateList>
+            </div>
+            <div v-else>
+              <VoteResultChart
+                :result="vote.result"
+              ></VoteResultChart>
+            </div>
+          </div>
+          <div v-if="vote.voterCount > 0">
+            투표율 : {{ Math.round(vote.votedCount * 1000 / vote.voterCount) / 10 }} % ({{ vote.votedCount }} / {{ vote.voterCount }})
           </div>
         </v-card-text>
         <v-card-text v-if="vote.state === VoteState.voting && !vote.voted && selectedVoteId === vote.voteId">
@@ -200,7 +188,11 @@ export default class VoterHome extends Vue {
             .filter(v => v.state !== VoteState.completed)
             .map(v => v.voteId);
           if (voteIds.length > 0) {
-            this.wsc.wsEmit('request.votes.update.status', voteIds);
+            this.wsc.wsEmit(
+              'request.votes.update.status',
+              {
+                voteIds: voteIds
+              });
           }
         }
       }, 1000);
@@ -244,6 +236,7 @@ export default class VoterHome extends Vue {
     )
       .then((response) => {
         this.info = new ElectionForVoterItem(response.data);
+        this.$store.commit('setCurrentElection', this.info);
       })
       .catch((err) => {
         alert('에러! ' + err);

@@ -47,6 +47,16 @@ export class Vote {
     return Vote.parseJsonVoteResult(this.cachedResult);
   }
 
+  public get sortedCandidates(): Candidate[] {
+    return this.candidates.sort((x, y) => {
+      const xt = x.number;
+      const yt = y.number;
+      if (xt < yt) return -1;
+      else if (xt > yt) return 1;
+      return 0;
+    });
+  }
+
   public static voteResultToString(data: VoteResult): string {
     return JSON.stringify(data);
   }

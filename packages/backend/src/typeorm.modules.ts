@@ -29,7 +29,7 @@ export function OrmRootConfig (): Promise<DynamicModule> {
       charset: ConfigManager.DB_CHARSET,
       timezone: 'Z',
       synchronize: true,
-      logging: 'all',
+      logging: ['log', 'info', 'warn', 'error', 'migration'],
       entities: [
         Election,
         Voter,

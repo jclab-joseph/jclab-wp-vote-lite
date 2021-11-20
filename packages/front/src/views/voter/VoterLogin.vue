@@ -72,9 +72,10 @@ export default class VoterLogin extends Vue {
     )
       .then((response) => {
         this.errorMessage = '';
-        console.log(response);
-        this.$store.dispatch('configReload');
-        this.$router.push('/voter');
+        this.$store.dispatch('configReload')
+          .then(() => {
+            this.$router.push('/voter');
+          });
       })
       .catch((err: AxiosError) => {
         console.error(err);

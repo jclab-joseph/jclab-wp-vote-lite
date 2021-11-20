@@ -143,20 +143,25 @@ export class WebsocketGateway {
           };
         })
         .catch((err: Error) => {
-          this.log.error(`websocket connect error (status=${(err instanceof HttpException) ? err.getStatus() : '?'})`, err);
+          this.log.error(`connection[${connectionId}] connect error (status=${(err instanceof HttpException) ? err.getStatus() : '?'})`, err);
           if (err instanceof HttpException) {
             return {
               statusCode: err.getStatus()
             };
           }
-          return Promise.reject(err);
+          return {
+            statusCode: 500
+          };
         });
     } else
     if (routeKey === '$disconnect') {
-      this.controller.onDisconnect(connectionId);
-      return Promise.resolve({
-        statusCode: 200
-      });
+      return this.controller.onDisconnect(connectionId)
+        .catch((err) => {
+          this.log.warn(`connection[${connectionId}] disconnect error`, err);
+        })
+        .then(() => ({
+          statusCode: 200
+        }));
     }
     else if (routeKey === '$default') {
       return Promise.resolve()
@@ -166,6 +171,9 @@ export class WebsocketGateway {
           } else {
             return this.controller.onRawMessage(connectionId, event.body);
           }
+        })
+        .catch((err) => {
+          this.log.warn(`connection[${connectionId}] handling error`, err);
         })
         .then(() => {
           return {};

@@ -18,10 +18,18 @@
 
       <v-spacer></v-spacer>
 
-      <v-btn v-if="isLoggedIn" icon v-on:click="logout" style="margin-right: 1em">
-        <v-icon>fas fa-sign-out-alt</v-icon>
-        LOGOUT
-      </v-btn>
+      <div style="display: flex; flex-direction: row">
+        <div style="margin-right: 2em">
+        <span>ws connection : </span>
+          <i v-if="wsStatus" class="fas fa-signal signal-ok"></i>
+          <i v-else class="fas fa-exclamation signal-no"></i>
+        </div>
+
+        <v-btn v-if="isLoggedIn" v-on:click="logout" style="margin-right: 1em">
+          <v-icon>fas fa-sign-out-alt</v-icon>
+          LOGOUT
+        </v-btn>
+      </div>
     </v-app-bar>
     <v-main>
       <div v-if="$store.state.loading">
@@ -41,13 +49,19 @@
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
 }
+
+.signal-ok {
+  color: #fff;
+}
+
+.signal-no {
+  color: #f55;
+}
 </style>
 <script lang="ts">
-import {
-  Component,
-  Vue, Watch,
-} from 'vue-property-decorator';
+import { Component, Vue, Watch } from 'vue-property-decorator';
 import { ElectionItem } from '@/wrappers';
+import { HandshakeStatus } from '@/service/appsvc';
 
 @Component({
   components: {
@@ -74,6 +88,10 @@ export default class App extends Vue {
 
   public get isLoggedIn (): boolean {
     return this.$store.state.isLoggedIn;
+  }
+
+  public get wsStatus (): boolean {
+    return this.$appsvc.wsStatus === HandshakeStatus.SUCCESS;
   }
 
   public get currentElection (): ElectionItem | null {
