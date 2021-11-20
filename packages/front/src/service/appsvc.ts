@@ -188,6 +188,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
       this._wsStartHandshake();
     };
     ws.onclose = (ev) => {
+      this._wsHandshakeStatus = HandshakeStatus.IDLE;
       console.log('websocket close: ', ev);
       if ((ws as any).useReconnect) {
         setTimeout(() => {
@@ -276,6 +277,7 @@ export class AppServiceImpl implements AppService, AppServicePriv {
         console.error(err);
       })
       .finally(() => {
+        this.wsClose();
         this.goLogin();
       });
   }
