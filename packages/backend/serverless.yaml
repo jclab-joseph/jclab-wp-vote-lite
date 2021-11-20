@@ -1,0 +1,181 @@
+service: jclab-wp-vote-lite
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  region: ap-northeast-2
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+  stage: prod
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource: "arn:aws:secretsmanager:ap-northeast-2:023247924618:secret:jclab-wp-lite/prod/vote-backend-D4aERP"
+  endpointType: regional
+  apiGateway:
+    apiKeySourceType: HEADER
+    apiKeys:
+      - jclab-wp-vote-lite-cloudfront
+    binaryMediaTypes:
+      - 'image/*'
+      - 'font/*'
+      - 'application/octet-stream'
+      - 'application/vnd.hancom.hwp'
+
+plugins:
+  - serverless-offline
+  - serverless-webpack
+
+custom:
+  webpack:
+    webpackConfig: 'webpack.config.js' # Name of webpack configuration file
+    includeModules: # Node modules configuration for packaging
+      forceExclude:
+        - aws-sdk # Use global module in lambda environment
+        - http-proxy-middleware
+      forceInclude:
+        - '@nestjs/platform-express'
+        - mysql
+    packager: 'yarn' # Packager that will be used to package your external modules
+    excludeFiles: src/**/*.test.js # Provide a glob for files to ignore
+  customDomain:
+#    rest:
+#      domainName: vote.wp-lite.jclab.kr
+#      stage: prod
+#      certificateName: '*.foo.com'
+#      createRoute53Record: true
+#      endpointType: 'regional'
+#      securityPolicy: tls_1_2
+#    http:
+#      domainName: api.vote.wp-lite.jclab.kr
+#      stage: prod
+#      certificateName: '*.vote.wp-lite.jclab.kr'
+#      createRoute53Record: true
+#      endpointType: 'regional'
+#      securityPolicy: tls_1_2
+    websocket:
+      domainName: ws.vote.wp-lite.jclab.kr
+      stage: prod
+      certificateName: '*.vote.wp-lite.jclab.kr'
+      createRoute53Record: true
+      endpointType: 'regional'
+      securityPolicy: tls_1_2
+#  apigwBinary:
+#    types:
+#      - 'image/*'
+#      - 'font/*'
+#      - 'application/octet-stream'
+
+# you can add statements to the Lambda function's IAM Role here
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:ListBucket"
+#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+#    - Effect: "Allow"
+#      Action:
+#        - "s3:PutObject"
+#      Resource:
+#        Fn::Join:
+#          - ""
+#          - - "arn:aws:s3:::"
+#            - "Ref" : "ServerlessDeploymentBucket"
+#            - "/*"
+
+# you can define service wide environment variables here
+#  environment:
+#    variable1: value1
+
+# you can add packaging information here
+#package:
+#  patterns:
+#    - '!exclude-me.js'
+#    - '!exclude-me-dir/**'
+#    - include-me.js
+#    - include-me-dir/**
+
+functions:
+  backend:
+    handler: src/index.handler
+    vpc:
+      subnetIds:
+        - subnet-0780d0943bf4da256 # jclab-private-lambda-a
+        - subnet-0b0e62db0915aaf93 # jclab-private-lambda-b
+        - subnet-0237eeaa5cb654410 # jclab-private-lambda-c
+        - subnet-0a0628432e7b4b566 # jclab-private-lambda-d
+      securityGroupIds:
+        - sg-0d752cd324753b8ee
+    environment:
+      AWS_SECRETS_SECRET_MANAGER_NAME: arn:aws:secretsmanager:ap-northeast-2:023247924618:secret:jclab-wp-lite/prod/vote-backend-D4aERP
+      APIG_ENDPOINT: 'https://ew7bue6fml.execute-api.ap-northeast-2.amazonaws.com/prod'
+    memorySize: 512
+    timeout: 10
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: $default
+#    The following are a few example events you can configure
+#    NOTE: Please make sure to change your handler code to work with those events
+#    Check the event documentation for details
+#    events:
+#      - httpApi:
+#          path: /users/create
+#          method: get
+#      - websocket: $connect
+#      - s3: ${env:BUCKET}
+#      - schedule: rate(10 minutes)
+#      - sns: greeter-topic
+#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
+#      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
+#      - alexaSmartHome: amzn1.ask.skill.xx-xx-xx-xx
+#      - iot:
+#          sql: "SELECT * FROM 'some_topic'"
+#      - cloudwatchEvent:
+#          event:
+#            source:
+#              - "aws.ec2"
+#            detail-type:
+#              - "EC2 Instance State-change Notification"
+#            detail:
+#              state:
+#                - pending
+#      - cloudwatchLog: '/aws/lambda/hello'
+#      - cognitoUserPool:
+#          pool: MyUserPool
+#          trigger: PreSignUp
+#      - alb:
+#          listenerArn: arn:aws:elasticloadbalancing:us-east-1:XXXXXX:listener/app/my-load-balancer/50dc6c495c0c9188/
+#          priority: 1
+#          conditions:
+#            host: example.com
+#            path: /hello
+
+#    Define function environment variables here
+#    environment:
+#      variable2: value2
+
+# you can add CloudFormation resource templates here
+#resources:
+#  Resources:
+#    NewResource:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: my-new-bucket
+#  Outputs:
+#     NewOutput:
+#       Description: "Description for the output"
+#       Value: "Some output value"
+

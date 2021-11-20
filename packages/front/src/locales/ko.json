@@ -1,0 +1,37 @@
+{
+  "message": "hello i18n !!",
+  "error": {
+    "please_retry": "일시적인 오류가 발생하였습니다. 다시 시도 해 주세요."
+  },
+  "manager": {
+    "entry": {
+      "name": "관리자"
+    }
+  },
+  "viewer": {
+    "entry": {
+      "name": "뷰어"
+    }
+  },
+  "voter": {
+    "login": {
+      "title": "유권자 로그인",
+      "login_button": "로그인",
+      "error_wrong_creds": "잘못된 로그인 정보입니다"
+    },
+    "entry": {
+      "name": "유권자"
+    },
+    "vote_state": {
+      "completed": "완료됌",
+      "voted": "투표 함",
+      "voting": "투표 대기",
+      "ready": "준비중"
+    }
+  },
+  "application": {
+    "vote-lite": {
+      "name": "Vote Lite"
+    }
+  }
+}

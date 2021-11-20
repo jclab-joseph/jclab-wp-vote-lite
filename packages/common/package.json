@@ -1,0 +1,10 @@
+{
+  "name": "@jclab-wp/vote-lite-common",
+  "version": "0.0.1",
+  "private": true,
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  }
+}
