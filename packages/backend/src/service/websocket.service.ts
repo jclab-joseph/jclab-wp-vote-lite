@@ -1,5 +1,5 @@
 import * as util from 'util';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsHandshakeRequest, WsHandshakeResponse } from '@jclab-wp/vote-lite-common';
 import { ElectionService } from './election.service';
@@ -157,7 +157,12 @@ export class WebsocketService {
 
   private handshakeAsManager(connectionId: string, session: SessionData): Promise<void> {
     return this.authService.decodeAccessToken(session.cookies[AuthService.ACCESS_TOKEN_COOKIE_NAME])
-      .then((result) => result && this.authService.toAuthorizedAccessToken(result))
+      .then((result) => {
+        if (!result) {
+          return Promise.reject(new UnauthorizedException('NO TOKEN'));
+        }
+        return this.authService.toAuthorizedAccessToken(result);
+      })
       .then((accessToken) => {
         const newSessionData: SessionData = {
           ...session,
@@ -174,7 +179,12 @@ export class WebsocketService {
 
   private handshakeAsVoter(connectionId: string, session: SessionData): Promise<void> {
     return this.voterAuthService.decodeVoteToken(session.cookies[VoteAuthService.VOTE_TOKEN_COOKIE_NAME])
-      .then((result) => result && this.voterAuthService.toVoterJWTPayload(result))
+      .then((result) => {
+        if (!result) {
+          return Promise.reject(new UnauthorizedException('NO TOKEN'));
+        }
+        return this.voterAuthService.toVoterJWTPayload(result);
+      })
       .then((voterToken) => {
         const newSessionData: SessionData = {
           ...session,
