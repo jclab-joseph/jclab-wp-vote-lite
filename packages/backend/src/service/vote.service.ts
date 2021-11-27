@@ -374,11 +374,12 @@ export class VoteService {
             voteMsg.candidate = candidate;
             voteMsg.message = message;
             return this.voteMessageRepository.save(voteMsg)
-              .then(() => {
-                this.redisManager.redis.sadd(redisKeys.votedVoterList(voteId), voterId, (err, res) => {
-                  this.redisManager.redis.expire(redisKeys.votedVoterList(voteId), 86400 * 30);
-                });
-              });
+              .then(() => {});
+          })
+          .then(() => {
+            this.redisManager.redis.sadd(redisKeys.votedVoterList(voteId), voterId, (err, res) => {
+              this.redisManager.redis.expire(redisKeys.votedVoterList(voteId), 86400 * 30);
+            });
           });
       });
   }
