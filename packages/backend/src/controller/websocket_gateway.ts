@@ -7,6 +7,7 @@ import { Context } from 'aws-lambda';
 import { WebsocketController } from './websocket_controller';
 import { NestApplication } from '@nestjs/core';
 import ConfigManager from '../config';
+import { Sentry } from '../sentry';
 
 function isLambda(): boolean {
   return !!process.env.LAMBDA_TASK_ROOT;
@@ -131,6 +132,9 @@ export class WebsocketGateway {
     event: any,
     context: Context
   ): Promise<null | any> {
+    if (!event.requestContext) {
+      return Promise.resolve(null);
+    }
     const {
       requestContext: { connectionId, routeKey }
     } = event;
@@ -144,6 +148,7 @@ export class WebsocketGateway {
         })
         .catch((err: Error) => {
           this.log.error(`connection[${connectionId}] connect error (status=${(err instanceof HttpException) ? err.getStatus() : '?'})`, err);
+          Sentry.captureException(err);
           if (err instanceof HttpException) {
             return {
               statusCode: err.getStatus()
@@ -157,6 +162,7 @@ export class WebsocketGateway {
     if (routeKey === '$disconnect') {
       return this.controller.onDisconnect(connectionId)
         .catch((err) => {
+          Sentry.captureException(err);
           this.log.warn(`connection[${connectionId}] disconnect error`, err);
         })
         .then(() => ({
@@ -173,6 +179,7 @@ export class WebsocketGateway {
           }
         })
         .catch((err) => {
+          Sentry.captureException(err);
           this.log.warn(`connection[${connectionId}] handling error`, err);
         })
         .then(() => {

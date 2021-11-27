@@ -1,4 +1,5 @@
-import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import * as Sentry from '@sentry/serverless';
 import {OrmFeatureModule, OrmRootConfig} from './typeorm.modules';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import {ConfigController} from './controller/config';
@@ -55,6 +56,12 @@ import { ManagerViewController } from './controller/manager_view';
 // , AuthController, OauthController, ProxyController
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): any {
+    consumer
+      .apply(Sentry.Handlers.requestHandler())
+      .forRoutes('*');
+    consumer
+      .apply(Sentry.Handlers.tracingHandler())
+      .forRoutes('*');
     consumer
       .apply(LoggerMiddleware)
       .forRoutes('*');
