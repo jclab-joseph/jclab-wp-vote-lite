@@ -227,11 +227,12 @@ export class VoteService {
           .then((result) => {
             const voteResultCadts: Record<string, VoteCadtResult> = (!result) ? [] :
               result.reduce((map, cur) => {
+                const count = (typeof cur.count === 'number') ? cur.count : parseInt(cur.count);
                 map[cur.r_cadt_id] = {
                   cadtId: cur.r_cadt_id,
                   name: '',
                   number: cur.r_cadt_number,
-                  count: cur.count
+                  count: count
                 } as VoteCadtResult;
                 return map;
               }, {});
