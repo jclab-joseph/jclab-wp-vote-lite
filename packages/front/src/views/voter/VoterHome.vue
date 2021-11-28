@@ -127,6 +127,9 @@
           </div>
         </v-card-text>
       </v-card>
+      <div v-if="votes.length === 0">
+        <h1>아직 생성 된 투표가 없습니다.</h1>
+      </div>
     </v-container>
   </v-main>
 </template>

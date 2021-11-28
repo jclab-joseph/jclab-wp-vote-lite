@@ -1,5 +1,6 @@
 <template>
-  <div style="display: flex; justify-content: center; background: #dfd">
+  <div style="display: flex; align-content: center; background: #dfd">
+    <span>유권자 수:</span>
     <v-text-field v-model="temp" />
     <v-btn @click="apply">설정</v-btn>
   </div>
